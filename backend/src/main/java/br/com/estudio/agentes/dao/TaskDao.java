@@ -12,4 +12,5 @@ public interface TaskDao {
     Optional<Task> findById(Long id);
     List<Task> findRecent(int limit);
     List<Task> findByAgent(Long agentId, int limit);
+    List<Task> findChildren(Long parentId);
 }

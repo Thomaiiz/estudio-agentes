@@ -79,6 +79,13 @@ Os comandos de cada ferramenta também podem ser ajustados ali (`estudio.cli.*`)
 Tarefas para o mesmo agente entram numa fila (uma por vez); agentes diferentes trabalham em paralelo.
 O quadro na parede mostra quantos agentes estão trabalhando.
 
+### Parar um agente
+
+No painel do agente (clique na mesa), enquanto ele trabalha aparece o botão **■ Parar**. Ele encerra a IA
+que está rodando na hora e esvazia a fila desse agente. No Chefe Atlas, as partes que ele delegou ao time
+param junto. A tarefa fica como "Parada pelo usuário", e o que já foi criado continua na pasta.
+(API: `POST /api/agents/{id}/stop`.)
+
 ## Time e equipes fixas
 
 | Agente | Papel | Equipe fixa |

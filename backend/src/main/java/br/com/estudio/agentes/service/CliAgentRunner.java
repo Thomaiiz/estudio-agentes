@@ -41,6 +41,8 @@ public class CliAgentRunner implements AgentRunner {
     private final String fallbackProvider;
     private final long timeoutMs;
     private final Map<String, Boolean> available = new ConcurrentHashMap<>();
+    private final Map<Long, Process> running = new ConcurrentHashMap<>();
+    private final java.util.Set<Long> cancelled = ConcurrentHashMap.newKeySet();
 
     public CliAgentRunner(@Value("${estudio.cli.openai}") String openai,
                           @Value("${estudio.cli.gemini}") String gemini,
@@ -74,9 +76,11 @@ public class CliAgentRunner implements AgentRunner {
         IllegalStateException first = null;
         for (int i = 0; i < order.size() && i < 2; i++) { // no máximo uma segunda tentativa
             String provider = order.get(i);
+            if (cancelled.remove(task.getId())) throw new IllegalStateException("Parada pelo usuário");
             try {
                 return runWith(provider, commands.get(provider), agent, task, listener);
             } catch (CliFailure e) {
+                if (cancelled.remove(task.getId())) throw new IllegalStateException("Parada pelo usuário");
                 if (first == null) first = e;
                 log.warn("[{}] {} falhou: {}", agent.getName(), label(provider), e.getMessage());
                 if (e.timeout || i + 1 >= Math.min(order.size(), 2)) break;
@@ -103,6 +107,25 @@ public class CliAgentRunner implements AgentRunner {
         ProcessBuilder pb = new ProcessBuilder(full).directory(dir.toFile()).redirectErrorStream(true);
         log.info("[{}] {} em {}", agent.getName(), String.join(" ", cmd), dir);
         Process process = pb.start();
+        running.put(task.getId(), process);
+        try {
+            return pump(process, provider, prompt, listener);
+        } finally {
+            running.remove(task.getId(), process);
+        }
+    }
+
+    @Override
+    public void cancel(long taskId) {
+        cancelled.add(taskId);
+        Process p = running.get(taskId);
+        if (p != null) {
+            p.descendants().forEach(ProcessHandle::destroyForcibly); // a CLI costuma abrir subprocessos
+            p.destroyForcibly();
+        }
+    }
+
+    private String pump(Process process, String provider, String prompt, ProgressListener listener) throws Exception {
         // vigia: encerra a ferramenta se passar do tempo, mesmo que ela fique em silêncio
         var watchdog = java.util.concurrent.CompletableFuture.runAsync(() -> {
             if (process.isAlive()) process.destroyForcibly();

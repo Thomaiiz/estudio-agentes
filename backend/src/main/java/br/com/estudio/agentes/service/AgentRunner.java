@@ -15,4 +15,7 @@ public interface AgentRunner {
     }
 
     String run(Agent agent, Task task, ProgressListener listener) throws Exception;
+
+    /** Interrompe o que estiver rodando para a tarefa (botão "Parar"). */
+    default void cancel(long taskId) {}
 }

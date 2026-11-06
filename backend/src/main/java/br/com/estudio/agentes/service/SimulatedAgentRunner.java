@@ -7,6 +7,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /** Simula o trabalho de um agente em etapas, emitindo progresso (estudio.runner.mode=simulado). */
@@ -19,6 +21,7 @@ public class SimulatedAgentRunner implements AgentRunner {
             "Executando", "Revisando", "Finalizando");
 
     private final long passoMs;
+    private final Set<Long> cancelled = ConcurrentHashMap.newKeySet();
 
     public SimulatedAgentRunner(@Value("${estudio.simulacao.passo-ms:700}") long passoMs) {
         this.passoMs = passoMs;
@@ -30,9 +33,16 @@ public class SimulatedAgentRunner implements AgentRunner {
         for (int i = 0; i < passos; i++) {
             long jitter = ThreadLocalRandom.current().nextLong(passoMs / 2 + 1);
             Thread.sleep(passoMs + jitter);
+            if (cancelled.remove(task.getId())) throw new IllegalStateException("Parada pelo usuário");
             int progresso = (int) Math.round((i + 1) * 100.0 / passos);
             listener.onProgress(progresso, ETAPAS.get(i));
         }
+        cancelled.remove(task.getId());
         return "%s concluiu \"%s\" usando %s.".formatted(agent.getName(), task.getTitle(), agent.getModel());
+    }
+
+    @Override
+    public void cancel(long taskId) {
+        cancelled.add(taskId);
     }
 }

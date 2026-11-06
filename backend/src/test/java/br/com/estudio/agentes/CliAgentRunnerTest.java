@@ -51,4 +51,19 @@ class CliAgentRunnerTest {
                 .hasMessageContaining("Gemini CLI terminou com erro (3)")
                 .hasMessageContaining("limite de uso atingido");
     }
+
+    @Test
+    void pararMataAFerramentaNaHoraESemTentarOutra() throws Exception {
+        String lento = "sh|-c|cat >/dev/null; sleep 30";
+        CliAgentRunner runner = new CliAgentRunner(OK, lento, "nao-instalado-xyz", "", "OPENAI", 1);
+        Task t = task();
+        new Thread(() -> {
+            try { Thread.sleep(500); } catch (InterruptedException ignored) { }
+            runner.cancel(t.getId());
+        }).start();
+        long start = System.currentTimeMillis();
+        assertThatThrownBy(() -> runner.run(agent("GEMINI"), t, (p, m) -> {}))
+                .hasMessage("Parada pelo usuário");
+        assertThat(System.currentTimeMillis() - start).isLessThan(10_000);
+    }
 }

@@ -55,6 +55,11 @@
       <div class="task-now">
         <div class="row"><strong>{{ task.title }}</strong><span>{{ task.progress }}%</span></div>
         <div class="bar"><div [style.width.%]="task.progress" [style.background]="agent.color"></div></div>
+        @if (task.status === 'EM_ANDAMENTO' || task.status === 'NA_FILA') {
+          <button type="button" class="btn stop" (click)="stop()" [disabled]="stopping()">
+            {{ stopping() ? 'Parando…' : '■ Parar' }}
+          </button>
+        }
       </div>
     }
 

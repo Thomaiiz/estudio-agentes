@@ -44,6 +44,7 @@ export class OfficeComponent implements AfterViewInit, OnDestroy {
   description = '';
   viaWebSocket = true;
   sending = signal(false);
+  stopping = signal(false);
   toast = signal<string | null>(null);
 
   constructor() {
@@ -124,6 +125,17 @@ export class OfficeComponent implements AfterViewInit, OnDestroy {
     this.api.assignTask(agent.id, title, description).subscribe({
       next: () => this.done(`Tarefa enviada para ${agent.name}`),
       error: err => { this.sending.set(false); this.flash(err?.error?.erro ?? 'Falha ao enviar a tarefa'); },
+    });
+  }
+
+  /** Para a tarefa atual do agente e esvazia a fila dele (no Chefe Atlas, o time todo para junto). */
+  stop() {
+    const agent = this.selected();
+    if (!agent) return;
+    this.stopping.set(true);
+    this.api.stopAgent(agent.id).subscribe({
+      next: r => { this.stopping.set(false); this.flash(r.paradas ? `${agent.name} parou` : `${agent.name} não estava trabalhando`); },
+      error: () => { this.stopping.set(false); this.flash('Não consegui parar o agente'); },
     });
   }
 

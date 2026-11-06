@@ -14,6 +14,7 @@ export class ApiService {
   assignTask(agentId: number, title: string, description?: string) {
     return this.http.post<Task>(`/api/agents/${agentId}/tasks`, { title, description });
   }
+  stopAgent(agentId: number) { return this.http.post<{ paradas: number }>(`/api/agents/${agentId}/stop`, {}); }
   recentTasks(limit = 30) { return this.http.get<Task[]>(`/api/tasks?limit=${limit}`); }
   agentTasks(agentId: number, limit = 5) { return this.http.get<Task[]>(`/api/agents/${agentId}/tasks?limit=${limit}`); }
   files(taskId: number) { return this.http.get<ProjectFiles>(`/api/tasks/${taskId}/files`); }

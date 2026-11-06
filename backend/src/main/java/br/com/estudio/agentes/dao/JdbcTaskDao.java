@@ -94,4 +94,9 @@ public class JdbcTaskDao implements TaskDao {
     public List<Task> findByAgent(Long agentId, int limit) {
         return jdbc.query("SELECT * FROM task WHERE agent_id = ? ORDER BY id DESC LIMIT ?", MAPPER, agentId, limit);
     }
+
+    @Override
+    public List<Task> findChildren(Long parentId) {
+        return jdbc.query("SELECT * FROM task WHERE parent_id = ? ORDER BY id", MAPPER, parentId);
+    }
 }

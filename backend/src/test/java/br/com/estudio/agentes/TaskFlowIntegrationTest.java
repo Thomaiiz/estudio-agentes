@@ -76,6 +76,35 @@ class TaskFlowIntegrationTest {
     }
 
     @Test
+    void botaoPararEncerraATarefaDoAgenteEAsPartesDelegadas() throws Exception {
+        var resp = rest.postForEntity("/api/agents/1/tasks", Map.of("title", "Projeto para parar"), Map.class);
+        long rootId = ((Number) resp.getBody().get("id")).longValue();
+        Thread.sleep(400); // o Chefe Atlas já planejou e delegou
+
+        var stop = rest.postForEntity("/api/agents/1/stop", null, Map.class);
+        assertThat(stop.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(((Number) stop.getBody().get("paradas")).intValue()).isGreaterThanOrEqualTo(1);
+
+        JsonNode root = null;
+        long deadline = System.currentTimeMillis() + 5_000;
+        while (System.currentTimeMillis() < deadline) {
+            JsonNode tasks = mapper.readTree(rest.getForObject("/api/tasks?limit=100", String.class));
+            root = null;
+            boolean childActive = false;
+            for (JsonNode t : tasks) {
+                if (t.path("id").asLong() == rootId) root = t;
+                if (t.path("parentId").asLong() == rootId
+                        && List.of("NA_FILA", "EM_ANDAMENTO").contains(t.path("status").asText())) childActive = true;
+            }
+            if (root != null && "FALHOU".equals(root.path("status").asText()) && !childActive) break;
+            Thread.sleep(100);
+        }
+        assertThat(root).isNotNull();
+        assertThat(root.path("status").asText()).isEqualTo("FALHOU");
+        assertThat(root.path("result").asText()).isEqualTo("Parada pelo usuário");
+    }
+
+    @Test
     void orquestradorDivideATarefaComOTimeEIntegraNoFim() throws Exception {
         BlockingQueue<JsonNode> events = new LinkedBlockingQueue<>();
         WebSocketSession ws = connect(events);

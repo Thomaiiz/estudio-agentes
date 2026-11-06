@@ -58,6 +58,8 @@ public class TaskService {
 
     private final Map<Long, ExecutorService> queues = new ConcurrentHashMap<>();
     private final Map<Long, AtomicInteger> pending = new ConcurrentHashMap<>();
+    /** Tarefas que o usuário mandou parar. */
+    private final java.util.Set<Long> cancelled = ConcurrentHashMap.newKeySet();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public TaskService(AgentService agentService, AgentDao agentDao, TaskDao taskDao,
@@ -137,6 +139,7 @@ public class TaskService {
         broadcaster.broadcast(AgentEvent.ofTask(EventType.TASK_STARTED, agent, task, "Pensando..."));
 
         try {
+            checkStop(task);
             Files.createDirectories(Path.of(task.getWorkspace()));
             AgentRunner.ProgressListener listener = (progress, message) -> {
                 task.setProgress(Math.max(0, Math.min(99, progress)));
@@ -149,6 +152,7 @@ public class TaskService {
             String result = agent.isOrchestrator()
                     ? orchestrate(agent, task, listener)
                     : runner.run(agent, task, listener);
+            checkStop(task);
             task.setStatus(TaskStatus.CONCLUIDA);
             task.setProgress(100);
             task.setResult(result);
@@ -160,16 +164,47 @@ public class TaskService {
             broadcaster.broadcast(AgentEvent.ofTask(EventType.TASK_COMPLETED, agent, task, "Pronto!"));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            fail(agent, task, "Interrompida");
+            fail(agent, task, cancelled.contains(task.getId()) ? STOPPED : "Interrompida");
         } catch (Exception e) {
             log.warn("Falha na tarefa {} do agente {}: {}", task.getId(), agentId, e.getMessage());
-            fail(agent, task, e.getMessage());
+            fail(agent, task, cancelled.contains(task.getId()) ? STOPPED : e.getMessage());
         } finally {
+            cancelled.remove(task.getId());
             int left = pending.get(agentId).decrementAndGet();
             if (left == 0) {
                 scheduler.schedule(() -> backToIdle(agentId), CELEBRATION_MS, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    private static final String STOPPED = "Parada pelo usuário";
+
+    private void checkStop(Task task) {
+        if (cancelled.contains(task.getId())) throw new IllegalStateException(STOPPED);
+    }
+
+    /**
+     * Botão "Parar": encerra a tarefa em andamento do agente e esvazia a fila dele.
+     * Se for o orquestrador, as partes que ele delegou também param.
+     * @return quantas tarefas foram paradas
+     */
+    public int stopAgent(Long agentId) {
+        agentService.get(agentId); // 404 se não existir
+        int count = 0;
+        for (Task t : taskDao.findByAgent(agentId, 200)) {
+            count += stopTask(t);
+        }
+        return count;
+    }
+
+    private int stopTask(Task t) {
+        if (t.getStatus() != TaskStatus.NA_FILA && t.getStatus() != TaskStatus.EM_ANDAMENTO) return 0;
+        int count = cancelled.add(t.getId()) ? 1 : 0;
+        runner.cancel(t.getId());
+        for (Task child : taskDao.findChildren(t.getId())) {
+            count += stopTask(child);
+        }
+        return count;
     }
 
     /**
@@ -204,17 +239,21 @@ public class TaskService {
                 Pedido original:
                 %s""".formatted(roster, original)), scaled(listener, 0, 15, "Planejando"));
         } catch (Exception e) {
+            checkStop(task);
             // sem plano o time ainda consegue trabalhar a partir do pedido original
             log.warn("Plano da tarefa {} falhou: {}", task.getId(), e.getMessage());
             listener.onProgress(15, "Não consegui escrever o plano; o time segue pelo pedido original");
         }
 
+        checkStop(task);
         // 2) construção e 3) revisão/testes
         int total = builders.size() + reviewers.size();
         AtomicInteger delivered = new AtomicInteger();
         List<Long> children = new ArrayList<>();
         children.addAll(delegateAndWait(lead, task, builders, original, listener, delivered, total));
+        checkStop(task);
         children.addAll(delegateAndWait(lead, task, reviewers, original, listener, delivered, total));
+        checkStop(task);
         List<String> ok = new ArrayList<>(), failed = new ArrayList<>();
         for (Long id : children) {
             taskDao.findById(id).ifPresent(t -> {
@@ -240,6 +279,7 @@ public class TaskService {
                 Pedido original:
                 %s""".formatted(original)), scaled(listener, 85, 99, "Integrando"));
         } catch (Exception e) {
+            checkStop(task);
             // as entregas do time continuam na pasta; só a costura final não aconteceu
             log.warn("Integração da tarefa {} falhou: {}", task.getId(), e.getMessage());
             summary = "A integração final não rodou: " + e.getMessage();
@@ -265,6 +305,7 @@ public class TaskService {
         int doneHere = 0;
         while (doneHere < children.size()) {
             if (System.currentTimeMillis() > deadline) throw new IllegalStateException("O time não terminou a tempo");
+            checkStop(task);
             Thread.sleep(500);
             int done = 0;
             for (Long id : children) {
