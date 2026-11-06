@@ -14,7 +14,7 @@
   <groupId>br.com.estudio</groupId>
   <artifactId>estudio-agentes</artifactId>
   <version>0.1.0</version>
-  <name>Estudio de Agentes - Backend</name>
+  <name>Socios Acrilicos - Backend</name>
 
   <properties>
     <java.version>21</java.version>

@@ -511,7 +511,7 @@ export class OfficeScene {
     g.fillStyle = '#ffe9d6';
     g.font = '700 104px Inter, sans-serif';
     g.shadowColor = '#f08a5d'; g.shadowBlur = 28;
-    g.fillText('Estúdio de Agentes', 512, 140);
+    g.fillText('Sócios Acrílicos', 512, 140);
     g.shadowBlur = 0;
     g.fillStyle = '#b8a594';
     g.font = '600 30px Inter, sans-serif';

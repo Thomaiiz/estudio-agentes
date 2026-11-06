@@ -22,7 +22,7 @@ type Tab = 'contas' | 'voz' | 'skills';
       @switch (tab()) {
         @case ('contas') {
           <p class="sub intro">Cada provedor será ligado ao backend por um <code>AgentRunner</code> próprio.
-            Hoje o estúdio usa o executor simulado, então nenhuma conta é necessária.</p>
+            Hoje o Sócios Acrílicos usa o executor simulado, então nenhuma conta é necessária.</p>
           <div class="card list">
             @for (p of providers; track p.name) {
               <div class="item">

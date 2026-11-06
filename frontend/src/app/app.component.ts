@@ -9,7 +9,7 @@ import { RealtimeService } from './core/realtime.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
     <nav class="rail">
-      <div class="brand" title="Estúdio de Agentes">
+      <div class="brand" title="Sócios Acrílicos">
         <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
           <rect x="4" y="9" width="24" height="17" rx="5" fill="#f08a5d"/>
           <rect x="8" y="4" width="5" height="6" rx="1.5" fill="#f08a5d"/>

@@ -1,4 +1,4 @@
-# Estúdio de Agentes (MVP)
+# Sócios Acrílicos (MVP)
 
 Painel onde cada agente de IA tem uma mesa num escritório 3D. Quando um agente recebe uma tarefa,
 o backend publica eventos por WebSocket e o escritório reage em tempo real.
