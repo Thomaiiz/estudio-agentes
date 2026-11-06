@@ -21,7 +21,8 @@ import java.util.stream.Stream;
 @Service
 public class ProjectFilesService {
 
-    private static final Set<String> IGNORED = Set.of("node_modules", ".git", "target", "dist", ".angular", "__pycache__", ".venv");
+    private static final Set<String> IGNORED = Set.of("node_modules", ".git", "target", "dist", ".angular", "__pycache__", ".venv", "venv",
+            ".pytest_cache", ".mypy_cache", ".ruff_cache", ".idea", ".vscode", ".DS_Store");
     private static final int MAX_FILES = 1000;
 
     private final TaskDao taskDao;
@@ -52,7 +53,8 @@ public class ProjectFilesService {
                         });
             }
         }
-        files.sort(Comparator.comparing(FileEntry::path));
+        // arquivos da raiz (PLANO.md, README.md...) primeiro, depois por pasta
+        files.sort(Comparator.comparing((FileEntry f) -> f.path().contains("/")).thenComparing(FileEntry::path));
         return new ProjectFiles(task.getId(), task.getAgentId(), task.getTitle(), task.getStatus().name(),
                 dir.toString(), task.getStartedAt(), task.getFinishedAt(), task.getResult(), files);
     }

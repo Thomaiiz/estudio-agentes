@@ -59,7 +59,9 @@ export class DeliveryComponent {
       next: d => {
         this.data.set(d);
         if (!this.selected()) {
-          const first = this.site() ?? d.files.find(f => f.changed) ?? d.files[0];
+          const changed = d.files.filter(f => f.changed);
+          const first = this.site() ?? changed.find(f => /(^|\/)README\.md$/i.test(f.path))
+            ?? changed.find(f => f.path.endsWith('.md')) ?? changed[0] ?? d.files[0];
           if (first) this.open(first);
         }
       },
