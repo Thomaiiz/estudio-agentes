@@ -11,6 +11,19 @@ o backend publica eventos por WebSocket e o escritório reage em tempo real.
 
 ## Como rodar
 
+O jeito mais fácil, que também mantém o app atualizado sozinho:
+
+```bash
+./atualizar.sh
+```
+
+Ele sobe o backend e o frontend e, a cada 30 segundos, verifica o GitHub. Quando chega algo novo, baixa a
+mudança (`git pull`), reinicia o backend se ele mudou e reinstala o frontend se as dependências mudaram (o
+resto do frontend recarrega sozinho). Os logs ficam em `logs/`. Ctrl+C para parar tudo.
+Para mudar o intervalo: `INTERVALO=60 ./atualizar.sh`.
+
+Ou, manualmente, em dois terminais:
+
 ```bash
 # 1) backend (porta 8080)
 cd backend

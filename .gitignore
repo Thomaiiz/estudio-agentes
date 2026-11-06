@@ -5,3 +5,4 @@ frontend/.angular/
 *.log
 .idea/
 .vscode/
+logs/
