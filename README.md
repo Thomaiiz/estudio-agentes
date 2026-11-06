@@ -37,15 +37,15 @@ usando o **seu login** (o estúdio não guarda senha nem chave):
 
 Cada pedido ganha uma pasta em `~/estudio-projetos/<nome-do-pedido>-<id>`; o caminho aparece no painel do
 agente (clique para copiar). Tudo do time cai na mesma pasta: `frontend/`, `backend/`, `docs/`, `design/`,
-`midia/`, `testes/`, além de `PLANO.md` e `README.md` escritos pelo Atlas.
+`midia/`, `testes/`, além de `PLANO.md` e `README.md` escritos pelo Chefe Atlas.
 
 Quando um agente termina, o painel dele mostra **"Ver o que ele fez"**: abre a tela da entrega com os arquivos
 (marcados como "novo" os que ele criou/alterou), prévia do site (`index.html`) e do código, e o botão **Abrir site**.
 Os arquivos são servidos por `GET /api/tasks/{id}/files` e `GET /api/tasks/{id}/raw/<caminho>` (somente dentro da
 pasta do projeto, e o HTML roda isolado em sandbox).
 
-Fluxo do Atlas (orquestrador): **1)** escreve o `PLANO.md` → **2)** os agentes de construção trabalham em
-paralelo → **3)** revisão (Crivo) e testes (Farol) → **4)** Atlas integra e escreve o `README.md`.
+Fluxo do Chefe Atlas (orquestrador): **1)** escreve o `PLANO.md` → **2)** os agentes de construção trabalham em
+paralelo → **3)** revisão (Crivo) e testes (Farol) → **4)** Chefe Atlas integra e escreve o `README.md`.
 
 Para voltar só à animação: `estudio.runner.mode=simulado` em `backend/src/main/resources/application.properties`.
 Os comandos de cada ferramenta também podem ser ajustados ali (`estudio.cli.*`).
@@ -70,7 +70,7 @@ O quadro na parede mostra quantos agentes estão trabalhando.
 
 | Agente | Papel | Equipe fixa |
 |---|---|---|
-| Atlas | Orquestra, divide e integra | — |
+| Chefe Atlas | Orquestra, divide e integra | — |
 | Nova | Front-end, UX/UI e design | Forja (dev) |
 | Forja | Back-end, infraestrutura e banco | Nova (dev) |
 | Lince | Pesquisa e documentação | — |
@@ -80,8 +80,8 @@ O quadro na parede mostra quantos agentes estão trabalhando.
 | Aurora | Imagens e ilustração | Prisma e Ritmo (mídia) |
 | Farol | Testes e qualidade | — |
 
-**Atlas é o orquestrador** (opção "Orquestrador" no editor): quando recebe uma tarefa, ele divide o pedido
-e cada agente do time recebe a sua parte ("<função>: <tarefa>"). O progresso do Atlas acompanha as entregas
+**Chefe Atlas é o orquestrador** (opção "Orquestrador" no editor): quando recebe uma tarefa, ele divide o pedido
+e cada agente do time recebe a sua parte ("<função>: <tarefa>"). O progresso do Chefe Atlas acompanha as entregas
 (ex.: 5/8) e ele só conclui depois de integrar tudo.
 
 Cada agente pode ter até 3 colegas fixos (`teamIds`). Quando ele recebe uma tarefa, cada colega recebe

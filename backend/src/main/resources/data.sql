@@ -1,8 +1,8 @@
 -- Time inicial (nomes e aparência próprios deste estúdio).
--- Atlas é o orquestrador: divide cada tarefa com o time e integra as entregas.
+-- Chefe Atlas é o orquestrador: divide cada tarefa com o time e integra as entregas.
 -- Equipes fixas: Nova + Forja (desenvolvimento) e Prisma + Ritmo + Aurora (mídia).
 INSERT INTO agent (name, role, provider, model, effort, color, body, eyes, antennas, tools, spec, team_ids, orchestrator, desk_index, status) VALUES
-('Atlas',  'Orquestra, divide e integra',        'CLAUDE', 'claude-opus-5-5',   'ALTO',  '#E07A5F', 'BLOCOS',  'PONTOS',  TRUE,  'LER_ARQUIVOS,BUSCAR_CODIGO,RODAR_COMANDOS', 'Você é o Atlas, líder do projeto: divide o pedido em partes, distribui para o time e integra as entregas.', '', TRUE, 0, 'DISPONIVEL'),
+('Chefe Atlas',  'Orquestra, divide e integra',        'CLAUDE', 'claude-opus-5-5',   'ALTO',  '#E07A5F', 'BLOCOS',  'PONTOS',  TRUE,  'LER_ARQUIVOS,BUSCAR_CODIGO,RODAR_COMANDOS', 'Você é o Chefe Atlas, líder do projeto: divide o pedido em partes, distribui para o time e integra as entregas.', '', TRUE, 0, 'DISPONIVEL'),
 ('Nova',   'Front-end, UX/UI e design',          'CLAUDE', 'claude-sonnet-5-5', 'MEDIO', '#F2CC8F', 'BLOCOS',  'PONTOS',  FALSE, 'LER_ARQUIVOS,EDITAR_ARQUIVOS,CRIAR_ARQUIVOS', 'Você é a Nova, responsável pela parte visual e interativa: telas, UX/UI e design.', '3', FALSE, 1, 'DISPONIVEL'),
 ('Forja',  'Back-end, infraestrutura e banco',   'CLAUDE', 'claude-sonnet-5-5', 'ALTO',  '#D1495B', 'BLOCOS',  'CHEVRON', FALSE, 'LER_ARQUIVOS,EDITAR_ARQUIVOS,RODAR_COMANDOS', 'Você é a Forja, responsável pelos bastidores técnicos: back-end, infraestrutura e banco de dados.', '2', FALSE, 2, 'DISPONIVEL'),
 ('Lince',  'Pesquisa e documentação',            'GEMINI', 'gemini-flash',      'ALTO',  '#7B8CDE', 'ESTRELA', 'PONTOS',  FALSE, 'PESQUISAR_WEB,ABRIR_PAGINAS', 'Você é o Lince: pesquisa referências e escreve a documentação do projeto.', '', FALSE, 3, 'DISPONIVEL'),
