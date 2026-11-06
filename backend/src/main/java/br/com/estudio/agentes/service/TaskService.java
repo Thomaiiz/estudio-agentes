@@ -192,7 +192,8 @@ public class TaskService {
 
         // 1) plano
         String roster = team.stream().map(a -> "- " + a.getName() + ": " + roleOf(a)).reduce((a, b) -> a + "\n" + b).orElse("");
-        runner.run(lead, subTask(task, "Planejar: " + task.getTitle(), """
+        try {
+            runner.run(lead, subTask(task, "Planejar: " + task.getTitle(), """
                 Escreva o arquivo PLANO.md nesta pasta, para o time abaixo seguir. NÃO implemente nada ainda.
                 O plano deve ter: objetivo, tecnologias escolhidas (simples e fáceis de rodar), estrutura de pastas
                 e o que cada agente deve entregar, com nomes de arquivos.
@@ -202,28 +203,54 @@ public class TaskService {
 
                 Pedido original:
                 %s""".formatted(roster, original)), scaled(listener, 0, 15, "Planejando"));
+        } catch (Exception e) {
+            // sem plano o time ainda consegue trabalhar a partir do pedido original
+            log.warn("Plano da tarefa {} falhou: {}", task.getId(), e.getMessage());
+            listener.onProgress(15, "Não consegui escrever o plano; o time segue pelo pedido original");
+        }
 
         // 2) construção e 3) revisão/testes
         int total = builders.size() + reviewers.size();
         AtomicInteger delivered = new AtomicInteger();
-        delegateAndWait(lead, task, builders, original, listener, delivered, total);
-        delegateAndWait(lead, task, reviewers, original, listener, delivered, total);
+        List<Long> children = new ArrayList<>();
+        children.addAll(delegateAndWait(lead, task, builders, original, listener, delivered, total));
+        children.addAll(delegateAndWait(lead, task, reviewers, original, listener, delivered, total));
+        List<String> ok = new ArrayList<>(), failed = new ArrayList<>();
+        for (Long id : children) {
+            taskDao.findById(id).ifPresent(t -> {
+                String who = agentDao.findById(t.getAgentId()).map(Agent::getName).orElse("#" + t.getAgentId());
+                (t.getStatus() == TaskStatus.CONCLUIDA ? ok : failed).add(who);
+            });
+        }
+        if (ok.isEmpty()) {
+            throw new IllegalStateException("Ninguém do time conseguiu entregar (" + String.join(", ", failed)
+                    + "). Abra a tarefa de cada um para ver o motivo.");
+        }
+        String report = "Entregaram: " + String.join(", ", ok)
+                + (failed.isEmpty() ? "" : "\nFalharam: " + String.join(", ", failed));
 
         // 4) integração
-        String summary = runner.run(lead, subTask(task, "Integrar: " + task.getTitle(), """
+        String summary;
+        try {
+            summary = runner.run(lead, subTask(task, "Integrar: " + task.getTitle(), """
                 O time terminou as partes do PLANO.md nesta pasta. Revise o conjunto: ajuste o que não encaixa
                 (imports, caminhos, nomes), sem reescrever o trabalho dos outros. Por fim, escreva um README.md
                 curto dizendo como abrir ou rodar o projeto.
 
                 Pedido original:
                 %s""".formatted(original)), scaled(listener, 85, 99, "Integrando"));
-        return summary;
+        } catch (Exception e) {
+            // as entregas do time continuam na pasta; só a costura final não aconteceu
+            log.warn("Integração da tarefa {} falhou: {}", task.getId(), e.getMessage());
+            summary = "A integração final não rodou: " + e.getMessage();
+        }
+        return report + "\n\n" + summary;
     }
 
-    private void delegateAndWait(Agent lead, Task task, List<Agent> agents, String original,
-                                 AgentRunner.ProgressListener listener, AtomicInteger delivered, int total)
+    private List<Long> delegateAndWait(Agent lead, Task task, List<Agent> agents, String original,
+                                       AgentRunner.ProgressListener listener, AtomicInteger delivered, int total)
             throws InterruptedException {
-        if (agents.isEmpty()) return;
+        if (agents.isEmpty()) return List.of();
         List<Long> children = new ArrayList<>();
         for (Agent mate : agents) {
             children.add(assignSingle(mate.getId(), new TaskRequest(
@@ -250,6 +277,7 @@ public class TaskService {
                 listener.onProgress(15 + 70 * delivered.get() / total, "Entregas: " + delivered.get() + "/" + total);
             }
         }
+        return children;
     }
 
     /** Tarefa interna do orquestrador (não persistida), na mesma pasta da tarefa principal. */

@@ -57,20 +57,42 @@ public class CliAgentRunner implements AgentRunner {
 
     @Override
     public String run(Agent agent, Task task, ProgressListener listener) throws Exception {
-        String provider = agent.getProvider();
-        List<String> cmd = commands.getOrDefault(provider, List.of());
-        if (cmd.isEmpty() || !isInstalled(cmd.get(0))) {
-            List<String> fb = commands.getOrDefault(fallbackProvider, List.of());
-            if (fb.isEmpty() || !isInstalled(fb.get(0))) {
-                throw new IllegalStateException(("Nenhuma ferramenta de IA encontrada para %s. Instale e faça login: "
-                        + "npm i -g @openai/codex (depois: codex) ou npm i -g @google/gemini-cli (depois: gemini)")
-                        .formatted(provider));
-            }
-            listener.onProgress(1, "Sem " + provider + " instalado: usando " + fallbackProvider);
-            provider = fallbackProvider;
-            cmd = fb;
+        // ordem de tentativa: o provedor do agente, o reserva e depois qualquer outro instalado
+        List<String> order = new ArrayList<>();
+        for (String p : List.of(agent.getProvider(), fallbackProvider, "OPENAI", "GEMINI", "CLAUDE")) {
+            List<String> c = commands.getOrDefault(p, List.of());
+            if (!order.contains(p) && !c.isEmpty() && isInstalled(c.get(0))) order.add(p);
         }
+        if (order.isEmpty()) {
+            throw new IllegalStateException(("Nenhuma ferramenta de IA encontrada para %s. Instale e faça login: "
+                    + "npm i -g @openai/codex (depois: codex) ou npm i -g @google/gemini-cli (depois: gemini)")
+                    .formatted(agent.getProvider()));
+        }
+        if (!order.get(0).equals(agent.getProvider())) {
+            listener.onProgress(1, "Sem " + label(agent.getProvider()) + " instalado: usando " + label(order.get(0)));
+        }
+        IllegalStateException first = null;
+        for (int i = 0; i < order.size() && i < 2; i++) { // no máximo uma segunda tentativa
+            String provider = order.get(i);
+            try {
+                return runWith(provider, commands.get(provider), agent, task, listener);
+            } catch (CliFailure e) {
+                if (first == null) first = e;
+                log.warn("[{}] {} falhou: {}", agent.getName(), label(provider), e.getMessage());
+                if (e.timeout || i + 1 >= Math.min(order.size(), 2)) break;
+                listener.onProgress(3, label(provider) + " falhou, tentando com " + label(order.get(i + 1)));
+            }
+        }
+        throw first;
+    }
 
+    /** Falha da ferramenta (código de saída ou tempo esgotado), que pode ser tentada com outro provedor. */
+    static final class CliFailure extends IllegalStateException {
+        final boolean timeout;
+        CliFailure(String msg, boolean timeout) { super(msg); this.timeout = timeout; }
+    }
+
+    private String runWith(String provider, List<String> cmd, Agent agent, Task task, ProgressListener listener) throws Exception {
         Path dir = Path.of(task.getWorkspace());
         Files.createDirectories(dir);
         String prompt = buildPrompt(agent, task);
@@ -112,13 +134,13 @@ public class CliAgentRunner implements AgentRunner {
         if (!process.waitFor(30, TimeUnit.SECONDS)) process.destroyForcibly();
         watchdog.cancel(false);
         if (System.currentTimeMillis() - start >= timeoutMs) {
-            throw new IllegalStateException("Tempo esgotado (" + timeoutMs / 60_000 + " min)");
+            throw new CliFailure("Tempo esgotado (" + timeoutMs / 60_000 + " min)", true);
         }
         int code = process.waitFor();
         String summary = String.join("\n", tail);
         if (code != 0) {
-            throw new IllegalStateException(label(provider) + " terminou com erro (" + code + "): "
-                    + (summary.length() > 400 ? summary.substring(summary.length() - 400) : summary));
+            throw new CliFailure(label(provider) + " terminou com erro (" + code + "): "
+                    + (summary.length() > 400 ? summary.substring(summary.length() - 400) : summary), false);
         }
         return summary.length() > 2000 ? summary.substring(summary.length() - 2000) : summary;
     }

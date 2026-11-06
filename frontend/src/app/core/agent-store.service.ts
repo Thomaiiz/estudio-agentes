@@ -90,7 +90,7 @@ export class AgentStore {
       TASK_RECEIVED: `${name} recebeu ${title}`,
       TASK_STARTED: `${name} começou ${title}`,
       TASK_COMPLETED: `${name} concluiu ${title}`,
-      TASK_FAILED: `${name} falhou em ${title}`,
+      TASK_FAILED: `${name} falhou em ${title}` + (e.message ? ` · ${e.message.replace(/^Falhou: /, '').slice(0, 140)}` : ''),
     };
     const item: FeedItem = {
       id: ++this.feedSeq, at: new Date(e.timestamp), agentId: e.agentId, agentName: name,
