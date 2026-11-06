@@ -1,0 +1,120 @@
+<div class="page">
+  <div class="head">
+    <div>
+      <h1>{{ editing() ? 'Editar agente' : 'Novo agente' }}</h1>
+      <p class="sub">Aparência, ferramentas e especificação. Ele ganha uma mesa no escritório ao salvar.</p>
+    </div>
+    <a class="btn ghost" routerLink="/equipe">Voltar</a>
+  </div>
+
+  <div class="layout">
+    <section class="card look">
+      <div class="preview" #preview [style.--c]="draft.color"></div>
+      <div class="name-preview">
+        <strong>{{ draft.name || 'Sem nome' }}</strong>
+        <span class="sub">{{ draft.role || 'Função do agente' }}</span>
+      </div>
+
+      <h2>Cor</h2>
+      <div class="colors">
+        @for (c of COLORS; track c) {
+          <button class="sw" [style.background]="c" [class.on]="draft.color.toLowerCase() === c.toLowerCase()"
+                  (click)="set('color', c)" [attr.aria-label]="c"></button>
+        }
+        <label class="sw custom" title="Outra cor">
+          <input type="color" [ngModel]="draft.color" (ngModelChange)="set('color', $event.toUpperCase())">+
+        </label>
+      </div>
+
+      <h2>Corpo</h2>
+      <div class="seg">
+        @for (b of BODIES; track b.id) {
+          <button [class.on]="draft.body === b.id" (click)="set('body', b.id)">{{ b.label }}</button>
+        }
+      </div>
+
+      <h2>Olhos</h2>
+      <div class="seg">
+        @for (e of EYES; track e.id) {
+          <button [class.on]="draft.eyes === e.id" (click)="set('eyes', e.id)">{{ e.label }}</button>
+        }
+      </div>
+
+      <label class="toggle">
+        <span>Antenas</span>
+        <input type="checkbox" [ngModel]="draft.antennas" (ngModelChange)="set('antennas', $event)">
+      </label>
+    </section>
+
+    <section class="card form">
+      <div class="two">
+        <label><span class="label">Nome</span>
+          <input [(ngModel)]="draft.name" maxlength="60" placeholder="Ex.: Bússola"></label>
+        <label><span class="label">Função</span>
+          <input [(ngModel)]="draft.role" maxlength="160" placeholder="Ex.: Planejamento e roadmap"></label>
+      </div>
+      <div class="two">
+        <label><span class="label">Provedor</span>
+          <select [(ngModel)]="draft.provider">
+            @for (p of PROVIDERS; track p[0]) { <option [value]="p[0]">{{ p[1] }}</option> }
+          </select></label>
+        <label><span class="label">Modelo</span>
+          <input [(ngModel)]="draft.model" placeholder="id do modelo"></label>
+      </div>
+
+      <div>
+        <span class="label">Esforço</span>
+        <div class="seg wide">
+          @for (e of EFFORTS; track e.id) {
+            <button [class.on]="draft.effort === e.id" (click)="draft.effort = e.id">{{ e.label }}</button>
+          }
+        </div>
+      </div>
+
+      <label class="toggle">
+        <span><strong>Orquestrador</strong><br><span class="label">Em vez de fazer sozinho, divide cada tarefa com o time e integra as entregas.</span></span>
+        <input type="checkbox" [(ngModel)]="draft.orchestrator">
+      </label>
+
+      <div>
+        <h2>Equipe fixa</h2>
+        <p class="label">Até 3 agentes que sempre trabalham junto com este: quando ele é escalado, os outros entram, cada um na sua parte.</p>
+        <div class="tools">
+          @for (m of store.agents(); track m.id) {
+            @if (m.id !== +(id() ?? 0)) {
+              <button class="chip" [class.on]="draft.teamIds.includes(m.id)" (click)="toggleMate(m.id)">
+                <span class="dot" [style.background]="m.color"></span> {{ m.name }}
+              </button>
+            }
+          }
+        </div>
+      </div>
+
+      <div>
+        <h2>Ferramentas</h2>
+        <p class="label">Comandos, web e acesso fora da pasta sempre pedem aprovação.</p>
+        <div class="tools">
+          @for (t of TOOLS; track t.id) {
+            <button class="chip" [class.on]="draft.tools.includes(t.id)" (click)="toggleTool(t.id)">
+              {{ draft.tools.includes(t.id) ? '✓' : '+' }} {{ t.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div>
+        <h2>Especificação</h2>
+        <p class="label">O que o agente faz, o que entrega e como trabalha com o time. Em Markdown.</p>
+        <textarea [(ngModel)]="draft.spec" rows="12"></textarea>
+      </div>
+
+      @if (error()) { <p class="err">{{ error() }}</p> }
+
+      <div class="actions">
+        @if (editing()) { <button class="btn danger" (click)="remove()">Remover agente</button> }
+        <span class="grow"></span>
+        <button class="btn primary" (click)="save()" [disabled]="saving()">{{ editing() ? 'Salvar' : 'Criar agente' }}</button>
+      </div>
+    </section>
+  </div>
+</div>

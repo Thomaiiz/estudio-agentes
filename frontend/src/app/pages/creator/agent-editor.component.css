@@ -1,0 +1,29 @@
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+.head a { text-decoration: none; }
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.look { padding: 16px; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 16px; }
+.preview { height: 240px; border-radius: 12px;
+  background: radial-gradient(circle at 50% 75%, color-mix(in srgb, var(--c) 30%, transparent), transparent 65%), #1a1613; }
+.name-preview { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-bottom: 4px; }
+h2 { font-size: 13px; margin: 6px 0 0; }
+.colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+.sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px rgba(255,255,255,.4); }
+.sw.custom { position: relative; display: grid; place-items: center; background: var(--panel-2); color: var(--muted); cursor: pointer; overflow: hidden; }
+.sw.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; padding: 0; }
+.seg { width: 100%; }
+.seg button { flex: 1; }
+.toggle { display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 4px; }
+.toggle input { width: 18px; height: 18px; }
+.form { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
+label { display: flex; flex-direction: column; gap: 6px; }
+.seg.wide { display: flex; margin-top: 6px; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tools .chip { cursor: pointer; }
+.err { color: var(--err); margin: 0; }
+.actions { display: flex; gap: 8px; }
+.grow { flex: 1; }

@@ -1,0 +1,79 @@
+<div class="wrap">
+  <header class="head">
+    <a class="btn ghost" routerLink="/escritorio">← Escritório</a>
+    @if (data(); as d) {
+      <div class="title">
+        <span class="label">
+          @if (agent(); as a) { <span class="dot" [style.background]="a.color"></span> {{ a.name }} · }
+          {{ d.status === 'CONCLUIDA' ? 'concluída' : d.status === 'FALHOU' ? 'falhou' : 'em andamento' }}
+          @if (d.finishedAt) { · {{ d.finishedAt | date: 'dd/MM HH:mm' }} }
+        </span>
+        <h1>{{ d.title }}</h1>
+      </div>
+      <div class="actions">
+        <button class="btn" (click)="load(+id())" title="Recarregar">↻</button>
+        <button class="btn" (click)="copy(d.workspace)">{{ copied() ? 'Copiado!' : 'Copiar caminho da pasta' }}</button>
+        @if (site(); as s) {
+          <a class="btn primary" [href]="rawUrl(s.path)" target="_blank" rel="noopener">Abrir site ↗</a>
+        }
+      </div>
+    }
+  </header>
+
+  @if (error()) { <p class="err">{{ error() }}</p> }
+
+  @if (data(); as d) {
+    @if (d.result) {
+      <details class="card summary" open>
+        <summary>Resumo do agente</summary>
+        <pre>{{ d.result }}</pre>
+      </details>
+    }
+
+    <div class="body">
+      <aside class="card files">
+        <div class="files-head">
+          <strong>{{ visible().length }} arquivo{{ visible().length === 1 ? '' : 's' }}</strong>
+          @if (changedCount() && changedCount() !== d.files.length) {
+            <div class="seg">
+              <button [class.on]="onlyChanged()" (click)="onlyChanged.set(true)">Dele ({{ changedCount() }})</button>
+              <button [class.on]="!onlyChanged()" (click)="onlyChanged.set(false)">Projeto ({{ d.files.length }})</button>
+            </div>
+          }
+        </div>
+        @for (f of visible(); track f.path) {
+          <button class="file" [class.on]="selected()?.path === f.path" (click)="open(f)">
+            <span class="name">{{ f.path }}</span>
+            <span class="meta">
+              @if (f.changed) { <span class="new">novo</span> }
+              {{ size(f.size) }}
+            </span>
+          </button>
+        } @empty {
+          <p class="label pad">Nenhum arquivo nesta pasta ainda.</p>
+        }
+      </aside>
+
+      <section class="card preview">
+        @if (selected(); as f) {
+          <div class="preview-head">
+            <code>{{ f.path }}</code>
+            <a class="btn ghost" [href]="rawUrl(f.path)" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+          </div>
+          @switch (kind()) {
+            @case ('site') {
+              @if (frameUrl(); as u) { <iframe [src]="u" sandbox="allow-scripts allow-forms allow-popups allow-modals" title="Prévia"></iframe> }
+            }
+            @case ('imagem') {
+              @if (frameUrl(); as u) { <div class="img"><img [src]="rawUrl(f.path)" [alt]="f.path"></div> }
+            }
+            @case ('texto') { <pre class="code">{{ text() ?? 'Carregando…' }}</pre> }
+            @default { <p class="label pad">Sem prévia para este tipo de arquivo. Use "Abrir em nova aba".</p> }
+          }
+        } @else {
+          <p class="label pad">Escolha um arquivo à esquerda.</p>
+        }
+      </section>
+    </div>
+  }
+</div>

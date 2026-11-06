@@ -1,0 +1,109 @@
+<div class="stage" #stage></div>
+
+<header class="top">
+  <div>
+    <h1>Escritório</h1>
+    <p class="sub">
+      @if (store.busyCount(); as n) { {{ n }} agente{{ n > 1 ? 's' : '' }} em ação agora }
+      @else { Time todo disponível · clique numa mesa para mandar uma tarefa }
+    </p>
+  </div>
+</header>
+
+@if (store.error()) {
+  <div class="banner">{{ store.error() }} <button class="btn" (click)="store.reload()">Tentar de novo</button></div>
+}
+
+<aside class="feed card">
+  <h2>Atividade ao vivo</h2>
+  @for (item of store.feed(); track item.id) {
+    <div class="feed-item" [class]="item.type">
+      <span class="dot" [style.background]="item.color"></span>
+      <span class="txt">{{ item.text }}</span>
+      <time>{{ item.at | date: 'HH:mm:ss' }}</time>
+    </div>
+  } @empty {
+    <p class="label">Os eventos do WebSocket aparecem aqui.</p>
+  }
+</aside>
+
+@if (selected(); as agent) {
+  <section class="panel card">
+    <div class="panel-head">
+      <span class="swatch" [style.background]="agent.color"></span>
+      <div>
+        <h2>{{ agent.name }}</h2>
+        <p class="sub">{{ agent.role }}</p>
+      </div>
+      <button class="btn ghost x" (click)="close()" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="meta">
+      <span class="chip"><span class="dot" [class]="agent.status"></span>{{ STATUS_LABEL[agent.status] }}</span>
+      <span class="chip">{{ PROVIDER_LABEL[agent.provider] }} · {{ agent.model }}</span>
+      <span class="chip">{{ agent.completedTasks }} concluídas</span>
+    </div>
+
+    @if (agent.orchestrator) {
+      <p class="team-note">Orquestrador: divide a tarefa com o time todo, acompanha as entregas e integra no fim.</p>
+    }
+    @if (agent.teamIds.length) {
+      <p class="team-note">Equipe fixa: ao enviar, {{ teamNames(agent) }} também {{ agent.teamIds.length > 1 ? "entram" : "entra" }} na sua parte.</p>
+    }
+
+    @if (selectedTask(); as task) {
+      <div class="task-now">
+        <div class="row"><strong>{{ task.title }}</strong><span>{{ task.progress }}%</span></div>
+        <div class="bar"><div [style.width.%]="task.progress" [style.background]="agent.color"></div></div>
+      </div>
+    }
+
+    @if (selectedTask()?.workspace; as ws) {
+      <button type="button" class="ws" (click)="copy(ws)" title="Copiar caminho">📁 {{ ws }}</button>
+    }
+
+    @if (lastDone(); as last) {
+      <div class="last" [class.err]="last.status === 'FALHOU'">
+        <div class="row"><span class="label">{{ last.status === 'FALHOU' ? 'Última tarefa falhou' : 'Última entrega' }}</span></div>
+        @if (last.workspace) {
+          <button type="button" class="ws" (click)="copy(last.workspace)" title="Copiar caminho">📁 {{ last.workspace }}</button>
+        }
+        @if (last.result) { <pre>{{ last.result }}</pre> }
+        @if (last.workspace) {
+          <a class="btn primary see" [routerLink]="['/entregas', last.id]">Ver o que ele fez →</a>
+        }
+      </div>
+    }
+
+    <form (ngSubmit)="send()">
+      <label class="label" for="t">Nova tarefa</label>
+      <input id="t" name="title" [(ngModel)]="title" placeholder="Ex.: Criar a página de cadastro" maxlength="200" autocomplete="off">
+      <textarea name="description" [(ngModel)]="description" rows="3" placeholder="Detalhes (opcional)"></textarea>
+      <div class="sugs">
+        @for (s of suggestions; track s) {
+          <button type="button" class="chip" (click)="title = s">{{ s }}</button>
+        }
+      </div>
+      <label class="check">
+        <input type="checkbox" name="ws" [(ngModel)]="viaWebSocket"> Enviar pelo WebSocket (senão, POST REST)
+      </label>
+      <div class="actions">
+        <a class="btn ghost" [routerLink]="['/agentes', agent.id]">Editar agente</a>
+        <button class="btn primary" type="submit" [disabled]="!title.trim() || sending()">Enviar tarefa</button>
+      </div>
+    </form>
+  </section>
+}
+
+<nav class="dock card">
+  <span class="label">Time</span>
+  @for (a of store.agents(); track a.id) {
+    <button class="mate" [class.on]="selectedId() === a.id" (click)="pick(a.id)" [title]="a.name + ' · ' + STATUS_LABEL[a.status]">
+      <span class="av" [style.background]="a.color">{{ a.name[0] }}</span>
+      <span class="dot" [class]="a.status"></span>
+    </button>
+  }
+  <a class="mate add" routerLink="/agentes/novo" title="Novo agente">+</a>
+</nav>
+
+@if (toast()) { <div class="toast">{{ toast() }}</div> }
