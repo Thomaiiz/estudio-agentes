@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Agent, ProjectFiles, Stats, Task } from './models';
+import { Agent, Knowledge, ProjectFiles, Stats, Task, VideoStudy } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -23,4 +23,10 @@ export class ApiService {
   }
   rawText(taskId: number, path: string) { return this.http.get(this.rawUrl(taskId, path), { responseType: 'text' }); }
   stats() { return this.http.get<Stats>('/api/stats'); }
+  knowledge() { return this.http.get<Knowledge[]>('/api/conhecimento'); }
+  addKnowledge(title: string, content: string, agentIds: number[], source = '') {
+    return this.http.post<Knowledge>('/api/conhecimento', { title, content, source, agentIds });
+  }
+  learnVideo(url: string, agentIds: number[]) { return this.http.post<VideoStudy>('/api/conhecimento/video', { url, agentIds }); }
+  deleteKnowledge(id: string) { return this.http.delete<void>(`/api/conhecimento/${encodeURIComponent(id)}`); }
 }

@@ -7,6 +7,7 @@ export const routes: Routes = [
   { path: 'agentes/novo', loadComponent: () => import('./pages/creator/agent-editor.component').then(m => m.AgentEditorComponent) },
   { path: 'agentes/:id', loadComponent: () => import('./pages/creator/agent-editor.component').then(m => m.AgentEditorComponent) },
   { path: 'entregas/:id', loadComponent: () => import('./pages/delivery/delivery.component').then(m => m.DeliveryComponent) },
+  { path: 'conhecimento', loadComponent: () => import('./pages/knowledge/knowledge.component').then(m => m.KnowledgeComponent) },
   { path: 'dados', loadComponent: () => import('./pages/data/data.component').then(m => m.DataComponent) },
   { path: 'ajustes', loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent) },
   { path: '**', redirectTo: 'escritorio' },

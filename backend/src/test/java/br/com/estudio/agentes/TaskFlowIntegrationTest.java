@@ -27,7 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"estudio.simulacao.passo-ms=20", "estudio.runner.mode=simulado",
-                "estudio.runner.workspace=target/test-projetos"})
+                "estudio.runner.workspace=target/test-projetos",
+                "estudio.conhecimento.dir=target/test-conhecimento",
+                // yt-dlp de mentira: grava uma legenda .vtt e imprime o título
+                "estudio.ytdlp=sh|-c|printf 'WEBVTT\\n\\n00:00.000 --> 00:01.000\\nOla <c>time</c>\\n\\n00:01.000 --> 00:02.000\\nOla time\\nSempre teste antes de entregar\\n' > video.pt.vtt; echo Video de teste|yt-dlp"})
 class TaskFlowIntegrationTest {
 
     @LocalServerPort int port;
@@ -73,6 +76,48 @@ class TaskFlowIntegrationTest {
         }
         assertThat(received).containsExactlyInAnyOrder(6L, 7L, 9L);
         ws.close();
+    }
+
+    @Test
+    void conhecimentoColadoEntraNaListaEPodeSerApagado() throws Exception {
+        var resp = rest.postForEntity("/api/conhecimento",
+                Map.of("title", "Padrão de commits", "content", "Mensagens curtas em português.", "agentIds", List.of(2)), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String id = (String) resp.getBody().get("id");
+        JsonNode list = mapper.readTree(rest.getForObject("/api/conhecimento", String.class));
+        assertThat(list.findValuesAsText("title")).contains("Padrão de commits");
+
+        var bad = rest.postForEntity("/api/conhecimento", Map.of("title", "", "content", "x"), Map.class);
+        assertThat(bad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        rest.delete("/api/conhecimento/" + id);
+        list = mapper.readTree(rest.getForObject("/api/conhecimento", String.class));
+        assertThat(list.findValuesAsText("id")).doesNotContain(id);
+    }
+
+    @Test
+    void videoViraTarefaDeEstudoEOResultadoViraConhecimento() throws Exception {
+        var resp = rest.postForEntity("/api/conhecimento/video",
+                Map.of("url", "https://www.youtube.com/watch?v=teste"), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(resp.getBody().get("agentName")).isEqualTo("Lince");
+        assertThat(resp.getBody().get("videoTitle")).isEqualTo("Video de teste");
+
+        JsonNode saved = null;
+        long deadline = System.currentTimeMillis() + 8_000;
+        while (saved == null && System.currentTimeMillis() < deadline) {
+            Thread.sleep(200);
+            for (JsonNode k : mapper.readTree(rest.getForObject("/api/conhecimento", String.class))) {
+                if (k.path("title").asText().equals("Vídeo: Video de teste")) saved = k;
+            }
+        }
+        assertThat(saved).isNotNull();
+        assertThat(saved.path("source").asText()).isEqualTo("https://www.youtube.com/watch?v=teste");
+        // sem APRENDIZADO.md (executor simulado), guarda a transcrição limpa
+        assertThat(saved.path("content").asText()).contains("Ola time Sempre teste antes de entregar").doesNotContain("-->");
+
+        var bad = rest.postForEntity("/api/conhecimento/video", Map.of("url", "nao e link"), Map.class);
+        assertThat(bad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

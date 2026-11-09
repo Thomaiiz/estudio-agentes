@@ -86,6 +86,23 @@ que está rodando na hora e esvazia a fila desse agente. No Chefe Atlas, as part
 param junto. A tarefa fica como "Parada pelo usuário", e o que já foi criado continua na pasta.
 (API: `POST /api/agents/{id}/stop`.)
 
+## Aprender (ensinar coisas aos agentes)
+
+Na tela **Aprender** (menu lateral) você ensina o time de dois jeitos:
+
+- **Vídeo do YouTube**: cole o link. O app baixa a legenda com o `yt-dlp`, salva em `transcricao.txt` e o
+  agente de pesquisa (Lince) escreve um `APRENDIZADO.md` com as lições. Quando ele termina, isso vira
+  conhecimento do time. Instale o `yt-dlp` uma vez:
+  ```bash
+  sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+  sudo chmod a+rx /usr/local/bin/yt-dlp
+  ```
+- **Colar texto**: uma transcrição, um artigo ou regras suas.
+
+Você escolhe quem aprende (todos ou alguns agentes). Tudo fica em `~/estudio-conhecimento/` (um `.md` por
+item, sobrevive a reinícios) e vai junto no pedido de cada tarefa desses agentes, até ~16 mil caracteres,
+do mais novo ao mais antigo. "Esquecer" apaga o item.
+
 ## Time e equipes fixas
 
 | Agente | Papel | Equipe fixa |

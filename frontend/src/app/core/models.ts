@@ -127,3 +127,20 @@ export function formatDuration(ms: number): string {
   const m = Math.floor(s / 60);
   return `${m} min ${s % 60} s`;
 }
+
+/** Algo que o time aprendeu. agentIds vazio = vale para todos. */
+export interface Knowledge {
+  id: string;
+  title: string;
+  source: string;
+  agentIds: number[];
+  createdAt: string;
+  content: string;
+}
+
+export interface VideoStudy {
+  taskId: number;
+  agentId: number;
+  agentName: string;
+  videoTitle: string;
+}

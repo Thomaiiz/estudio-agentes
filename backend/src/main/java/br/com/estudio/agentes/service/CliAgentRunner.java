@@ -44,6 +44,24 @@ public class CliAgentRunner implements AgentRunner {
     private final Map<Long, Process> running = new ConcurrentHashMap<>();
     private final java.util.Set<Long> cancelled = ConcurrentHashMap.newKeySet();
 
+    private final KnowledgeService knowledge;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CliAgentRunner(@Value("${estudio.cli.openai}") String openai,
+                          @Value("${estudio.cli.gemini}") String gemini,
+                          @Value("${estudio.cli.claude}") String claude,
+                          @Value("${estudio.cli.local:}") String local,
+                          @Value("${estudio.runner.fallback-provider:OPENAI}") String fallbackProvider,
+                          @Value("${estudio.runner.timeout-min:20}") long timeoutMin,
+                          KnowledgeService knowledge) {
+        this.commands = Map.of(
+                "OPENAI", split(openai), "GEMINI", split(gemini),
+                "CLAUDE", split(claude), "LOCAL", split(local));
+        this.fallbackProvider = fallbackProvider.toUpperCase(Locale.ROOT);
+        this.timeoutMs = TimeUnit.MINUTES.toMillis(timeoutMin);
+        this.knowledge = knowledge;
+    }
+
     public CliAgentRunner(@Value("${estudio.cli.openai}") String openai,
                           @Value("${estudio.cli.gemini}") String gemini,
                           @Value("${estudio.cli.claude}") String claude,
@@ -55,6 +73,7 @@ public class CliAgentRunner implements AgentRunner {
                 "CLAUDE", split(claude), "LOCAL", split(local));
         this.fallbackProvider = fallbackProvider.toUpperCase(Locale.ROOT);
         this.timeoutMs = TimeUnit.MINUTES.toMillis(timeoutMin);
+        this.knowledge = null;
     }
 
     @Override
@@ -99,7 +118,12 @@ public class CliAgentRunner implements AgentRunner {
     private String runWith(String provider, List<String> cmd, Agent agent, Task task, ProgressListener listener) throws Exception {
         Path dir = Path.of(task.getWorkspace());
         Files.createDirectories(dir);
-        String prompt = buildPrompt(agent, task);
+        String learned = knowledge == null ? "" : knowledge.forPrompt(agent.getId());
+        String prompt = buildPrompt(agent, task) + (learned.isEmpty() ? "" : """
+
+                O QUE O TIME APRENDEU (anotações e vídeos estudados; aplique quando ajudar nesta tarefa):
+                %s
+                """.formatted(learned));
 
         List<String> full = new ArrayList<>();
         if (WINDOWS) { full.add("cmd.exe"); full.add("/c"); }

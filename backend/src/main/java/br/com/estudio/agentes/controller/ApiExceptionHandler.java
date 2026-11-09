@@ -22,6 +22,12 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
     }
 
+    /** Falhas que o usuário consegue resolver (ex.: falta instalar o yt-dlp): mostra a mensagem na tela. */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> unprocessable(IllegalStateException e) {
+        return ResponseEntity.unprocessableEntity().body(Map.of("erro", String.valueOf(e.getMessage())));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> invalid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()

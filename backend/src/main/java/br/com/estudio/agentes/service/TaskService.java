@@ -60,6 +60,8 @@ public class TaskService {
     private final Map<Long, AtomicInteger> pending = new ConcurrentHashMap<>();
     /** Tarefas que o usuário mandou parar. */
     private final java.util.Set<Long> cancelled = ConcurrentHashMap.newKeySet();
+    /** Avisos de "tarefa terminou" (ex.: guardar o que o agente aprendeu). */
+    private final Map<Long, java.util.function.Consumer<Task>> finishHooks = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public TaskService(AgentService agentService, AgentDao agentDao, TaskDao taskDao,
@@ -91,7 +93,21 @@ public class TaskService {
         return main;
     }
 
+    /**
+     * Tarefa avulsa numa pasta já preparada (ex.: estudar um vídeo), com um aviso ao terminar.
+     * O aviso roda com a tarefa já concluída ou falhada.
+     */
+    public Task assignInWorkspace(Long agentId, TaskRequest request, Path workspace,
+                                  java.util.function.Consumer<Task> onFinish) {
+        return assignSingle(agentId, request, null, workspace.toString(), onFinish);
+    }
+
     private Task assignSingle(Long agentId, TaskRequest request, Task parent) {
+        return assignSingle(agentId, request, parent, null, null);
+    }
+
+    private Task assignSingle(Long agentId, TaskRequest request, Task parent, String workspace,
+                              java.util.function.Consumer<Task> onFinish) {
         if (request == null || request.title() == null || request.title().isBlank()) {
             throw new IllegalArgumentException("Título da tarefa é obrigatório");
         }
@@ -108,11 +124,15 @@ public class TaskService {
             task.setWorkspace(parent.getWorkspace());
         }
         taskDao.insert(task);
-        if (parent == null) {
+        if (workspace != null) {
+            task.setWorkspace(workspace);
+            taskDao.update(task);
+        } else if (parent == null) {
             task.setWorkspace(workspaceRoot.resolve(slug(task.getTitle()) + "-" + task.getId()).toString());
             taskDao.update(task);
         }
 
+        if (onFinish != null) finishHooks.put(task.getId(), onFinish);
         int queued = pending.computeIfAbsent(agentId, k -> new AtomicInteger()).incrementAndGet();
         if (queued == 1) {
             agentService.changeStatus(agent, AgentStatus.RECEBENDO);
@@ -170,6 +190,10 @@ public class TaskService {
             fail(agent, task, cancelled.contains(task.getId()) ? STOPPED : e.getMessage());
         } finally {
             cancelled.remove(task.getId());
+            var hook = finishHooks.remove(task.getId());
+            if (hook != null) {
+                try { hook.accept(task); } catch (Exception e) { log.warn("Aviso da tarefa {} falhou: {}", task.getId(), e.getMessage()); }
+            }
             int left = pending.get(agentId).decrementAndGet();
             if (left == 0) {
                 scheduler.schedule(() -> backToIdle(agentId), CELEBRATION_MS, TimeUnit.MILLISECONDS);
@@ -372,7 +396,7 @@ public class TaskService {
         return s.length() > 200 ? s.substring(0, 200) : s;
     }
 
-    static String slug(String text) {
+    public static String slug(String text) {
         String s = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
         if (s.length() > 40) s = s.substring(0, 40).replaceAll("-$", "");
